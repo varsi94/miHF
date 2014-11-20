@@ -19,6 +19,7 @@ public class MainFrame extends JFrame {
     private static final long serialVersionUID = -8808883923263763897L;
     private LabeledTextArea resultTF, inputTF, defaultTF;
     private JButton convertBtn;
+    private ResultsPanel resultsPanel;
     private AccentPredictionHandler handler;
 
     public MainFrame() {
@@ -28,20 +29,25 @@ public class MainFrame extends JFrame {
 	setDefaultCloseOperation(EXIT_ON_CLOSE);
 	pack();
     }
-
-    private class ConvertBtnListener implements ActionListener {
-	@Override
-	public void actionPerformed(ActionEvent e) {
-	    inputTF.setText(handler.getNoAccentsString(defaultTF.getText()));
-	    resultTF.setText(handler.getAccentsString(inputTF.getText()));
-	}
-
-    }
+    
+    private ActionListener buttonListener = new ActionListener() {
+        
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            if (e.getSource().equals(convertBtn)) {
+		inputTF.setText(handler.getNoAccentsString(defaultTF.getText()));
+		resultTF.setText(handler.getAccentsString(inputTF.getText()));
+		resultsPanel.setStatistics(handler.getStatistics());
+	    } else {
+		throw new IllegalArgumentException("Ismeretlen gomb!");
+	    }
+        }
+    };
 
     private void initComponents() {
 	GridLayout gridLayout = new GridLayout(1, 3, 10, 10);
 	JPanel mainPanel = new JPanel(gridLayout);
-	
+
 	defaultTF = new LabeledTextArea("Bemeneti szöveg:");
 	defaultTF.setPreferredSize(new Dimension(200, 100));
 	mainPanel.add(defaultTF);
@@ -56,12 +62,16 @@ public class MainFrame extends JFrame {
 	resultTF.setPreferredSize(new Dimension(200, 100));
 	resultTF.setEnabled(false);
 	mainPanel.add(resultTF);
-
+	
 	convertBtn = new JButton("Ékezetek felismerése!");
-	convertBtn.addActionListener(new ConvertBtnListener());
-
-	JPanel toolsPanel = new JPanel(new FlowLayout());
-	toolsPanel.add(convertBtn);
+	convertBtn.addActionListener(buttonListener);
+	
+	JPanel toolsPanel = new JPanel(new BorderLayout());
+	JPanel toolsBtnPanel = new JPanel(new FlowLayout());
+	resultsPanel = new ResultsPanel();
+	toolsBtnPanel.add(convertBtn);
+	toolsPanel.add(toolsBtnPanel, BorderLayout.CENTER);
+	toolsPanel.add(resultsPanel, BorderLayout.EAST);
 
 	add(mainPanel, BorderLayout.CENTER);
 	add(toolsPanel, BorderLayout.SOUTH);
