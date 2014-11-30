@@ -1,7 +1,13 @@
 package accentprediction;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.xml.sax.SAXException;
 
 /**
  * Magic happens.
@@ -11,10 +17,20 @@ import java.util.List;
 public class AccentPrediction implements AccentPredictionHandler {
     private Statistics statistics;
     private List<String> words;
+    private WordList wordList;
     private char[] accents = {'á', 'í', 'é', 'ó', 'ö', 'ő', 'ú', 'ü', 'ű'};
     
     public AccentPrediction() {
 	words = new ArrayList<String>();
+	try {
+	    wordList = WordList.loadWordListFromWiki(new File("D:\\szavak.xml"));
+	} catch (ParserConfigurationException e) {
+	    e.printStackTrace();
+	} catch (SAXException e) {
+	    e.printStackTrace();
+	} catch (IOException e) {
+	    e.printStackTrace();
+	}
     }
     
     private boolean isAccentsWord(String s) {
@@ -37,7 +53,7 @@ public class AccentPrediction implements AccentPredictionHandler {
     }
     
     private List<String> convertStringToWords(String s) {
-	String[] wordList = s.split(" ");
+	String[] wordList = s.split("[\\s+]");
 	List<String> list = new ArrayList<String>();
 	for (int i = 0; i < wordList.length; i++) {
 	    if (!wordList.equals("")) {
