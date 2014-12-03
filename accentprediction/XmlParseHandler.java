@@ -1,11 +1,7 @@
 package accentprediction;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -14,19 +10,15 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 public class XmlParseHandler extends DefaultHandler {
-    private BufferedWriter writer;
     private WordList wordList;
     private boolean text = false;
+    private FileInputStream is;
+    private int currPercentage;
     
-    public XmlParseHandler() {
-	File f = new File("output.txt");
-	try {
-	    writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(f)));
-	} catch (FileNotFoundException e) {
-	    e.printStackTrace();
-	}
-	
+    public XmlParseHandler(FileInputStream is) {
 	wordList = new WordList();
+	this.is = is;
+	currPercentage = 0;
     }
     
     @Override
@@ -54,26 +46,29 @@ public class XmlParseHandler extends DefaultHandler {
 	String s = new String(ch, start, length);
 	Matcher m = p.matcher(s);
 	while (m.find()) {
-	    String word = m.group(1);
-	    Word w = new Word(word);
-	    if (!wordList.contains(w)) {
-		wordList.add(w);
+	    String word = m.group(1).toLowerCase();
+	    if (!wordList.containsKey(word)) {
+		wordList.put(word, 1);
 	    } else {
-		Word curr = wordList.floor(w);
-		curr.setCount(curr.getCount() + 1);
+		wordList.increase(word);
 	    }
 	}
-    }
-    
-    public void closeFile() {
-	System.out.println("XmlParseHandler.closeFile()");
+	
+	
 	try {
-	    for (Word word : wordList) {
-		writer.write(word + "\n");
+	    long currByte = is.getChannel().position();
+	    long size = is.getChannel().size();
+	    int szazalek = (int) ((double)currByte / size * 100);
+	    if (szazalek > currPercentage) {
+		System.out.println(szazalek + " %");
+		currPercentage = szazalek;
 	    }
-	    writer.close();
 	} catch (IOException e) {
 	    e.printStackTrace();
 	}
+    }
+    
+    public WordList closeFile() {
+	return wordList;
     }
 }

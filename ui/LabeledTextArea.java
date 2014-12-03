@@ -24,6 +24,7 @@ public class LabeledTextArea extends JPanel {
 
 	textArea = new JTextArea();
 	textArea.setBorder(new LineBorder(Color.BLACK));
+	textArea.setLineWrap(true);
 	JScrollPane scrollPane = new JScrollPane(textArea,
 		JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
 		JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
