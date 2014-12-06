@@ -1,6 +1,9 @@
 package accentprediction;
 
 import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
@@ -39,10 +42,34 @@ public class XmlParseHandler extends DefaultHandler {
 	    text = false;
 	    String s = sb.toString();
 	    s = s.replaceAll("<(.*)>", "");
-	    s = s.replaceAll("http://([^\\s]+)", "");
-	    s = s.replaceAll("([^a-zA-ZÖÜÓŐÚÁŰÉÍöüóőúéáűí\\s]+)", " ");
-	    System.out.println(s);
+	    s = s.replaceAll("http(s|)://([^\\s]+)", "");
+	    s = s.replaceAll("(\\[|\\{)([\\s]*)(\\[|\\{)(.*?)(\\]|\\})([\\s]*)(\\]|\\})", " ");
+	    Pattern p = Pattern.compile("([\\s]*)([a-zA-ZéáűőúöüóíÉÁŰŐÚÖÜÓÍ]+)([\\s]*)");
+	    Matcher m = p.matcher(s);
+	    while(m.find()) {
+		String word = m.group(2).toLowerCase();
+		if (word.length() < 2) continue;
+		if (wordList.keySet().contains(word)) {
+		    wordList.increase(word);
+		} else {
+		    wordList.put(word, 1);
+		}
+	    }
+	    //System.out.println(s);
 	}
+	
+	try {
+	    long currByte = is.getChannel().position();
+	    long size = is.getChannel().size();
+	    int szazalek = (int) ((double)currByte / size * 100);
+	    if (szazalek > currPercentage) {
+		System.out.println(szazalek + " %");
+		currPercentage = szazalek;
+	    }
+	} catch (IOException e) {
+	    e.printStackTrace();
+	}
+
     }
 
     @Override

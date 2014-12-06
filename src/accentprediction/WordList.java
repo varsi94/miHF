@@ -44,7 +44,7 @@ public class WordList extends TreeMap<String, Integer> {
 		String word = data[0];
 		int num = Integer.parseInt(data[1]);
 		FileChannel channel = fis.getChannel();
-		if (num > 1) {
+		if (num > 500) {
 		    wordList.put(word, num);
 		}
 		int progress = (int) (100.0f * channel.position() / channel.size());

@@ -1,16 +1,10 @@
 package accentprediction;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.xml.parsers.ParserConfigurationException;
-
-import org.xml.sax.SAXException;
 
 /**
  * Magic happens.
@@ -26,52 +20,59 @@ public class AccentPrediction implements AccentPredictionHandler {
     public static final char[] accents = { 'á', 'í', 'é', 'ó', 'ö', 'ő', 'ú',
 	    'ü', 'ű', 'Á', 'Í', 'É', 'Ó', 'Ö', 'Ő', 'Ú', 'Ü', 'Ű' };
 
+    private String getTrigram(String word, int index) {
+	if (index < 0) {
+	    String s = word.substring(0, index + 3);
+	    while (s.length() < 3) {
+		s = " " + s;
+	    }
+	    return s;
+	} else if (index >= word.length() - 2) {
+	    String s = word.substring(index, word.length());
+	    while (s.length() < 3) {
+		s = s + " ";
+	    }
+
+	    return s;
+	} else {
+	    return word.substring(index, index + 3);
+	}
+    }
+
     public AccentPrediction() {
 
-	words = new ArrayList<String>();
-	BufferedWriter br = null;
-	try {
-	    br = new BufferedWriter(new OutputStreamWriter(
-		    new FileOutputStream("output.txt")));
-	    wordList = WordList
-		    .loadWordListFromWiki(new File("D:\\szavak.xml"));
-	    for (String word : wordList.keySet()) {
-		int num = wordList.get(word);
-		br.write(word + " " + num + "\n");
-	    }
-	} catch (ParserConfigurationException e) {
-	    e.printStackTrace();
-	} catch (SAXException e) {
-	    e.printStackTrace();
-	} catch (IOException e) {
-	    e.printStackTrace();
-	} finally {
-	    if (br != null) {
-		try {
-		    br.close();
-		} catch (IOException e) {
-		}
-	    }
-	}
-
-	wordList = WordList.loadFromDictionary(new File("output.txt"));
-	trigramDB = TrigramDB.loadFromFile(new File("output_trigram.txt"));
-	words = new ArrayList<String>();
+	/*
+	 * words = new ArrayList<String>(); BufferedWriter br = null; try { br =
+	 * new BufferedWriter(new OutputStreamWriter( new
+	 * FileOutputStream("output.txt"))); wordList = WordList
+	 * .loadWordListFromWiki(new File("D:\\szavak.xml")); for (String word :
+	 * wordList.keySet()) { int num = wordList.get(word); br.write(word +
+	 * " " + num + "\n"); } } catch (ParserConfigurationException e) {
+	 * e.printStackTrace(); } catch (SAXException e) { e.printStackTrace();
+	 * } catch (IOException e) { e.printStackTrace(); } finally { if (br !=
+	 * null) { try { br.close(); } catch (IOException e) { } } }
+	 */
 
 	/*
-	 * for (String word : wordList.keySet()) { if (wordList.get(word) > 1) {
-	 * for (int i = 0; i < word.length() - 2; i++) { String s =
-	 * word.substring(i, i + 3); Trigram t = Trigram.parseString(s); if
-	 * (trigramDB.containsKey(t)) { trigramDB.increase(t,
-	 * wordList.get(word)); } else { trigramDB.put(t, wordList.get(word)); }
-	 * } } }
+	 * wordList = WordList.loadFromDictionary(new File("output.txt"));
+	 * trigramDB = TrigramDB.loadFromFile(new File("output_trigram.txt"));
+	 * words = new ArrayList<String>();
+	 * 
+	 * trigramDB = new TrigramDB(); for (String word : wordList.keySet()) {
+	 * if (wordList.get(word) > 1) { for (int i = -2; i < word.length();
+	 * i++) { String s = getTrigram(word, i); Trigram t =
+	 * Trigram.parseString(s); if (trigramDB.containsKey(t)) {
+	 * trigramDB.increase(t, wordList.get(word)); } else { trigramDB.put(t,
+	 * wordList.get(word)); } } } }
 	 * 
 	 * PrintWriter bw = null; try { bw = new PrintWriter(new
 	 * File("output_trigram.txt")); for (Trigram t : trigramDB.keySet()) {
-	 * bw.println(t.getCharacters() + " " + trigramDB.get(t)); } } catch
+	 * bw.println(t.getCharacters() + ":" + trigramDB.get(t)); } } catch
 	 * (FileNotFoundException e) { e.printStackTrace(); } finally { if (bw
 	 * != null) { bw.close(); } }
 	 */
+	
+	
     }
 
     private boolean isAccentsWord(String s) {
@@ -160,32 +161,19 @@ public class AccentPrediction implements AccentPredictionHandler {
 	    String word = wordList.get(i);
 	    String res = word;
 	    List<String> variations = getWordVariants(word);
-	    if (word.length() < 3) {
-		int maxFrequency = 0;
-		for (String variation : variations) {
-		    if (this.wordList.containsKey(variation)) {
-			int frequency = this.wordList.get(variation);
-			if (frequency > maxFrequency) {
-			    maxFrequency = frequency;
-			    res = variation;
-			}
+	    int maxFrequency = 0;
+	    for (String variation : variations) {
+		if (this.wordList.containsKey(variation)) {
+		    int curr = 1;
+		    for (int j = -2; j < variation.length(); j++) {
+			Trigram t = Trigram
+				.parseString(getTrigram(variation, j));
+			curr *= trigramDB.get(t);
 		    }
-		}
-	    } else {
-		int maxFrequency = 0;
-		for (String variation : variations) {
-		    if (this.wordList.containsKey(variation)) {
-			int curr = 1;
-			for (int j = 0; j < variation.length() - 2; j++) {
-			    Trigram t = Trigram.parseString(variation
-				    .substring(j, j + 3));
-			    curr *= trigramDB.get(t);
-			}
 
-			if (curr > maxFrequency) {
-			    maxFrequency = curr;
-			    res = variation;
-			}
+		    if (curr > maxFrequency) {
+			maxFrequency = curr;
+			res = variation;
 		    }
 		}
 	    }

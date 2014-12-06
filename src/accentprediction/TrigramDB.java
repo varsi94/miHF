@@ -23,7 +23,7 @@ public class TrigramDB extends TreeMap<Trigram, Integer> {
 	    reader = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
 	    String currLine;
 	    while ((currLine = reader.readLine()) != null) {
-		String[] data = currLine.split(" ");
+		String[] data = currLine.split(":");
 		String trigram = data[0];
 		int num = Integer.parseInt(data[1]);
 		Trigram t = Trigram.parseString(trigram);
