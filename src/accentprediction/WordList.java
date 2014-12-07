@@ -10,8 +10,6 @@ import java.nio.channels.FileChannel;
 import java.util.TreeMap;
 
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
 
 import org.xml.sax.SAXException;
 
@@ -19,11 +17,12 @@ public class WordList extends TreeMap<String, Integer> {
     private static final long serialVersionUID = -5718540546244604226L;
     
     public static WordList loadWordListFromWiki(File f) throws ParserConfigurationException, SAXException, IOException {
-	SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
+	/*SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
 	FileInputStream is = new FileInputStream(f);
 	XmlParseHandler handler = new XmlParseHandler(is);
 	parser.parse(is, handler);
-	return handler.closeFile();
+	return handler.closeFile();*/
+	return null;
     }
 
     public void increase(String word) {

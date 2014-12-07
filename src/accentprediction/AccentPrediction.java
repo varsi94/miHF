@@ -1,10 +1,23 @@
 package accentprediction;
 
+import info.bliki.wiki.dump.IArticleFilter;
+import info.bliki.wiki.dump.Siteinfo;
+import info.bliki.wiki.dump.WikiArticle;
+import info.bliki.wiki.filter.PlainTextConverter;
+import info.bliki.wiki.model.WikiModel;
+
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.xml.sax.SAXException;
+
+import dbconnect.MySQLDBConnection;
 
 /**
  * Magic happens.
@@ -17,6 +30,7 @@ public class AccentPrediction implements AccentPredictionHandler {
     private List<String> words;
     private WordList wordList;
     private TrigramDB trigramDB;
+    private MySQLDBConnection conn;
     public static final char[] accents = { 'á', 'í', 'é', 'ó', 'ö', 'ő', 'ú',
 	    'ü', 'ű', 'Á', 'Í', 'É', 'Ó', 'Ö', 'Ő', 'Ú', 'Ü', 'Ű' };
 
@@ -38,6 +52,45 @@ public class AccentPrediction implements AccentPredictionHandler {
 	    return word.substring(index, index + 3);
 	}
     }
+
+    private IArticleFilter filter = new IArticleFilter() {
+	private int count = 0;
+	private int lastPercentage = 0;
+	private WikiModel model = new WikiModel("", "");
+	private PlainTextConverter converter = new PlainTextConverter(true);
+	private Pattern pattern = Pattern.compile("([a-zéáűőúöüóí]+)",
+		Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
+	@Override
+	public void process(WikiArticle article, Siteinfo arg1)
+		throws SAXException {
+	    if (count < 30000) {
+		String plainStr = model.render(converter, article.getText());
+		Matcher m = pattern.matcher(plainStr);
+		String before = null;
+		while (m.find()) {
+		    String word = m.group(1).toLowerCase();
+		    if (before == null) {
+			before = word;
+			continue;
+		    }
+
+		    TrigramWord trigramWord = new TrigramWord(before, word);
+		    conn.writeTrigram(trigramWord);
+		    // trigramDB.put(trigramWord, 1);
+		    before = word;
+		}
+		count++;
+		int perc = (int) ((double) count / 300);
+		if (perc > lastPercentage) {
+		    System.out.println(perc + " %");
+		    lastPercentage = perc;
+		}
+	    } else {
+		throw new SAXException(new BreakSAXException());
+	    }
+	}
+    };
 
     public AccentPrediction() {
 
@@ -71,8 +124,55 @@ public class AccentPrediction implements AccentPredictionHandler {
 	 * (FileNotFoundException e) { e.printStackTrace(); } finally { if (bw
 	 * != null) { bw.close(); } }
 	 */
+	words = new ArrayList<String>();
+	trigramDB = TrigramDB.loadFromFile(new File("output_trigramWord.txt"));
+//	trigramDB = TrigramDB.loadFromSerialized(new File("db.ser"));
+//	ObjectOutputStream oos;
+//	try {
+//	    oos = new ObjectOutputStream(new FileOutputStream("db.ser"));
+//	    oos.writeObject(trigramDB);
+//	    oos.close();
+//	} catch (IOException e) {
+//	    // TODO Auto-generated catch block
+//	    e.printStackTrace();
+//	}
 	
-	
+
+	// System.out.println(trigramDB.size());
+
+	// trigramDB = new TrigramDB();
+	// WikiXMLParser parser = null;
+	// try {
+	// parser = new WikiXMLParser("D:\\wiki.bz2", filter);
+	// parser.parse();
+	// } catch (UnsupportedEncodingException e) {
+	// e.printStackTrace();
+	// } catch (FileNotFoundException e) {
+	// e.printStackTrace();
+	// } catch (IOException e) {
+	// e.printStackTrace();
+	// } catch (SAXException e) {
+	// if (!(e.getCause() instanceof BreakSAXException)) {
+	// e.printStackTrace();
+	// }
+	// }
+	//
+	// System.out.println("kiírás");
+	// int size = trigramDB.size();
+	// PrintWriter pw = null;
+	// try {
+	// pw = new PrintWriter(new File("output_trigramWord.txt"));
+	// int counter = 0;
+	// for (TrigramWord trigram : trigramDB.keySet()) {
+	// int num = trigramDB.get(trigram);
+	// pw.println(trigram + " " + num);
+	// counter++;
+	// System.out.println(((double) counter / size) + " %");
+	// }
+	// pw.close();
+	// } catch (IOException e) {
+	// e.printStackTrace();
+	// }
     }
 
     private boolean isAccentsWord(String s) {
@@ -157,27 +257,43 @@ public class AccentPrediction implements AccentPredictionHandler {
 	/**
 	 * Magic happens.
 	 */
-	for (int i = 0; i < wordList.size(); i++) {
-	    String word = wordList.get(i);
-	    String res = word;
-	    List<String> variations = getWordVariants(word);
-	    int maxFrequency = 0;
-	    for (String variation : variations) {
-		if (this.wordList.containsKey(variation)) {
-		    int curr = 1;
-		    for (int j = -2; j < variation.length(); j++) {
-			Trigram t = Trigram
-				.parseString(getTrigram(variation, j));
-			curr *= trigramDB.get(t);
-		    }
+	for (int i = 1; i < wordList.size(); i++) {
+	    String word1 = wordList.get(i - 1);
+	    String word2 = wordList.get(i);
+	    /*
+	     * String res = word; List<String> variations =
+	     * getWordVariants(word); int maxFrequency = 0; for (String
+	     * variation : variations) { if
+	     * (this.wordList.containsKey(variation)) { int curr = 1; for (int j
+	     * = -2; j < variation.length(); j++) { Trigram t = Trigram
+	     * .parseString(getTrigram(variation, j)); curr *= trigramDB.get(t);
+	     * }
+	     * 
+	     * if (curr > maxFrequency) { maxFrequency = curr; res = variation;
+	     * } } }
+	     */
 
-		    if (curr > maxFrequency) {
-			maxFrequency = curr;
-			res = variation;
+	    List<String> variationsWord1 = getWordVariants(word1);
+	    List<String> variationsWord2 = getWordVariants(word2);
+	    int maxFrequency = -1;
+	    TrigramWord trigram = null;
+	    for (String variation1 : variationsWord1) {
+		for (String variation2 : variationsWord2) {
+		    TrigramWord t = new TrigramWord(variation1.toLowerCase(),
+			    variation2.toLowerCase());
+		    if (trigramDB.containsKey(t)) {
+			int frequency = trigramDB.get(t);
+			if (frequency > maxFrequency) {
+			    trigram = t;
+			    maxFrequency = frequency;
+			}
 		    }
 		}
 	    }
-	    wordList.set(i, res);
+	    if (maxFrequency != -1) {
+		wordList.set(i - 1, trigram.getWord(0));
+		wordList.set(i, trigram.getWord(1));
+	    }
 	}
 
 	StringBuilder sb = new StringBuilder();
